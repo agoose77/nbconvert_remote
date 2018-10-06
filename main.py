@@ -62,11 +62,47 @@ def error_response(error):
     return MESSAGE_HTML_STYLE + MESSAGE_HTML_ERROR_TEMPLATE.format(error=error)
 
 
+def get_bibliography(nb) -> str:
+    for cell in nb.cells:
+        if 'bibliography' in cell['metadata'].get('tags', {}):
+            break
+    else:
+        raise ValueError
+    return cell['source']
+
+
+def create_template(biblography):
+    return {'latex.tplx': r"""
+((*- extends 'article.tplx' -*))
+
+((* block docclass *))
+\usepackage{filecontents}
+((* endblock docclass *))
+
+{% block any_cell %}
+{% if 'bibliography' in cell['metadata'].get('tags', []) %}
+\begin{filecontents}{bibliography.bib}
+        {{ super() }}
+\end{filecontents}
+{% endif %}
+{% endblock any_cell %}
+
+((* block bibliography *))
+\bibliographystyle{unsrt}
+\bibliography{bibliography}
+((* endblock bibliography *))
+"""}
+
+
 async def convert_notebook(data, exporter):
     notebook = nbformat.reads(data, as_version=4)
 
-    ep = nbconvert.preprocessors.ExecutePreprocessor(timeout=600, kernel_name='python3')
-    ep.preprocess(notebook)
+    try:
+        bibliography = get_bibliography(notebook)
+    except ValueError:
+        pass
+    else:
+
 
     body, resources = exporter.from_notebook_node(notebook)
 
@@ -101,7 +137,6 @@ async def render():
         print("SET TEMPLATE",exporter.template_path)
 
     return await convert_notebook(data, exporter)
-
 
 
 if __name__ == "__main__":
