@@ -1,0 +1,15 @@
+((*- extends 'article.tplx' -*))
+
+((* block packages *))
+    ((( super() )))
+    \usepackage{filecontents}
+    \begin{filecontents}{bibliography.bib}
+    ((( resources['extracted_by_tag']['bibliography'][0] )))
+    \end{filecontents}
+
+((* endblock packages *))
+
+((* block bibliography *))
+\bibliographystyle{unsrt}
+\bibliography{bibliography}
+((* endblock bibliography *))
