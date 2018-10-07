@@ -16,7 +16,7 @@ setup(
     description="HTTP frontend to nbconvert. Currently doesn't execute the notebook.",
     license="MIT",
     keywords="http nbconvert",
-    url="https://github.com/agoose77/nbconvert_http",
+    url="https://github.com/agoose77/nbconvert_remote",
     entry_points={
         'console_scripts': [
             'nbconvert-http=nbconvert_http.serve:main'
