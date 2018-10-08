@@ -9,7 +9,7 @@ setup(
                       'nbformat'],
 
     package_data={
-        '': ['*.txt', '*.rst', '*.html'],
+        '': ['*.txt', '*.rst', '*.html', '*.tplx'],
     },
 
     # metadata to display on PyPI
