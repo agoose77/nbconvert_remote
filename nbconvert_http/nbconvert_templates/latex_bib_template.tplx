@@ -2,10 +2,14 @@
 
 ((* block packages *))
     ((( super() )))
-    \usepackage{filecontents}
-    \begin{filecontents}{bibliography.bib}
-    ((( resources['extracted_by_tag']['bibliography'][0] )))
-    \end{filecontents}
+    ((* set bib_sources = resources['extracted_by_tag'].get('bibliography', []) *))
+
+    ((* if bib_sources *))
+        \usepackage{filecontents}
+        \begin{filecontents}{bibliography.bib}
+        ((( bib_sources[0] )))
+        \end{filecontents}
+    ((* endif *))
 
 ((* endblock packages *))
 

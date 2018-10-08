@@ -30,8 +30,9 @@ def create_exporter(exporter_type: str) -> nbconvert.Exporter:
         yield exporter
 
 
-def convert_notebook(data, exporter_type: str) -> dict:
-    notebook = nbformat.reads(data, as_version=4)
+def convert_notebook(notebook_data: dict, exporter_type: str) -> dict:
+    notebook = nbformat.from_dict(notebook_data)
+
     with create_exporter(exporter_type) as exporter:
         body, resources = exporter.from_notebook_node(notebook)
     return {'body': body,

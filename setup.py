@@ -1,10 +1,12 @@
 from setuptools import setup, find_packages
+
 setup(
     name="nbconvert_http",
     version="0.1",
     packages=find_packages(),
 
-    install_requires=['nbconvert', 'quart', 'rfc6266', 'traitlets', 'nbformat'],
+    install_requires=['nbconvert', 'aiohttp', 'aiohttp_jinja2', 'multidict', 'jinja2', 'rfc6266', 'traitlets',
+                      'nbformat'],
 
     package_data={
         '': ['*.txt', '*.rst'],
