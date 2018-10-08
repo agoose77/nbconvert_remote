@@ -11,6 +11,12 @@ app = Quart(__name__)
 pool = None
 
 
+def get_exporter_names():
+    names = set(nbconvert.get_export_names())
+    names.remove('custom')
+    return names
+
+
 def convert_notebook_sync(data, exporter_name: str):
     from . import worker
     return worker.convert_notebook(data, exporter_name)
@@ -22,9 +28,11 @@ async def convert_notebook(notebook_data, exporter_type: str, disposition: str):
     result = await loop.run_in_executor(pool, convert_notebook_sync, notebook_data, exporter_type)
 
     body = result['body']
-    extension = result['extension']
+    resources = result['resources']
+    extension = resources['output_extension']
     mime_type = result['mime-type']
 
+    # TODO return entire response as JSON, then second layer to return the body and or attachment as download
     response = await make_response(body)
     response.headers['Content-Disposition'] = rfc6266.build_header(f"result{extension}",
                                                                    disposition=disposition)
@@ -46,7 +54,7 @@ async def render():
     form = await request.form
 
     exporter_type = form['exporter']
-    exporter_names = nbconvert.get_export_names()
+    exporter_names = get_exporter_names()
     if exporter_type not in exporter_names:
         return await render_template("error.html", message=f"Invalid exporter {exporter_type!r}, must be one of "
                                                            f"{exporter_names}")
@@ -57,7 +65,7 @@ async def render():
 
 @app.route('/', methods=['GET'])
 async def index():
-    exporters_set = set(nbconvert.get_export_names()) - {'pdf'}
+    exporters_set = set(get_exporter_names()) - {'pdf'}
     exporters = ['pdf', *exporters_set]
     return await render_template("index.html", exporters=exporters)
 

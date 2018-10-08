@@ -35,5 +35,5 @@ def convert_notebook(data, exporter_type: str) -> dict:
     with create_exporter(exporter_type) as exporter:
         body, resources = exporter.from_notebook_node(notebook)
     return {'body': body,
-            'extension': resources['output_extension'],
-            'mime-type': get_mime_response(exporter)}
+            'mime-type': get_mime_response(exporter),
+            'resources': resources}
