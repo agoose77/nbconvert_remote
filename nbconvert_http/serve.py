@@ -26,14 +26,14 @@ TO_VERSION = 4
 DISPOSITION_FIELDS = {'inline', 'attachment'}
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
-TEMPLATE_PATH = resource_path('nbconvert_http.nbconvert_templates', 'latex_bib_template.tplx')
+TEMPLATE_PATH_FACTORY = lambda: resource_path('nbconvert_http.nbconvert_templates', 'latex_bib_template.tplx')
 
 
 @asynccontextmanager
 async def render_execution_context(exporter_type: str, config: dict):
     # For LaTeX exporters, we want to use the bibliography template, which needs to be written to a file
     if issubclass(nbconvert.get_exporter(exporter_type), nbconvert.LatexExporter):
-        with TEMPLATE_PATH as path:
+        with TEMPLATE_PATH_FACTORY() as path:
             config['Exporter']['template_file'] = str(path)
             yield
     else:
