@@ -11,6 +11,8 @@ import nbformat
 import rfc6266
 from aiohttp import web
 from multidict import CIMultiDict
+from importlib.resources import path as resource_path
+from contextlib import asynccontextmanager
 
 app = web.Application()
 
@@ -24,6 +26,18 @@ TO_VERSION = 4
 DISPOSITION_FIELDS = {'inline', 'attachment'}
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
+TEMPLATE_PATH = resource_path('nbconvert_http.nbconvert_templates', 'latex_bib_template.tplx')
+
+
+@asynccontextmanager
+async def render_execution_context(exporter_type: str, config: dict):
+    # For LaTeX exporters, we want to use the bibliography template, which needs to be written to a file
+    if issubclass(nbconvert.get_exporter(exporter_type), nbconvert.LatexExporter):
+        with TEMPLATE_PATH as path:
+            config['Exporter']['template_file'] = str(path)
+            yield
+    else:
+        yield
 
 
 def get_exporter_names() -> Set[str]:
@@ -33,9 +47,9 @@ def get_exporter_names() -> Set[str]:
     return names
 
 
-def convert_notebook_sync(data: dict, exporter_name: str) -> dict:
+def convert_notebook_sync(data: dict, exporter_name: str, config: dict=None) -> dict:
     from . import worker
-    return worker.convert_notebook(data, exporter_name)
+    return worker.convert_notebook(data, exporter_name, config)
 
 
 def make_REST_error_response(title: str, detail: str) -> web.Response:
@@ -86,6 +100,15 @@ async def api_convert(request: web.Request) -> web.Response:
         return make_REST_error_response("Invalid field", f"Invalid exporter {exporter_type!r}, must be one of "
                                                          f"{exporter_names}")
 
+    try:
+        config = data['config']
+    except KeyError:
+        config = None
+    else:
+        if not isinstance(config, dict):
+            return make_REST_error_response("Invalid field",
+                                            f"Invalid config field value {config!r}, must be a dict")
+
     # Load notebook
     notebook = nbformat.from_dict(notebook_data)
     notebook = nbformat.convert(notebook, to_version=TO_VERSION)
@@ -100,10 +123,15 @@ async def api_convert(request: web.Request) -> web.Response:
     notebook_dict = nbformat.versions[major].to_notebook_json(notebook)
 
     loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(pool, convert_notebook_sync, notebook_dict, exporter_type)
+    try:
+        result = await loop.run_in_executor(pool, convert_notebook_sync, notebook_dict, exporter_type, config)
+    except Exception as err:
+        return make_REST_error_response("Unknown error", str(err))
+
     json_result = result.copy()
     if isinstance(json_result['body'], bytes):
         json_result['body'] = base64.b64encode(json_result['body']).decode('utf-8')
+
     return web.json_response(json_result)
 
 
@@ -142,8 +170,13 @@ async def render(request: web.Request) -> web.Response:
     notebook_string = notebook_field.file.read()
     notebook_data = nbformat.reads(notebook_string, TO_VERSION)
 
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(pool, convert_notebook_sync, notebook_data, exporter_type)
+    config = {'Exporter': {'preprocessors': ['nbconvert_http.preprocessors.TagExtractPreprocessor']},
+              'TagExtractPreprocessor': {'extract_cell_tags': ['bibliography']}}
+
+    # Only need to intercept template for the HTML API
+    async with render_execution_context(exporter_type, config):
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(pool, convert_notebook_sync, notebook_data, exporter_type, config)
 
     filename = f"result{result['resources']['output_extension']}"
     response = web.Response(body=result['body'],
