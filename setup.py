@@ -6,7 +6,7 @@ setup(
     packages=find_packages(),
 
     install_requires=['nbconvert', 'aiohttp', 'aiohttp_jinja2', 'multidict', 'jinja2', 'rfc6266', 'traitlets',
-                      'nbformat'],
+                      'nbformat', 'ipython'],
 
     package_data={
         '': ['*.txt', '*.rst', '*.html', '*.tplx'],
